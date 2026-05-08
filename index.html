@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title> 小甜豆· 体重管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --pink:       #f7a8c4;
+  --pink-deep:  #e8749e;
+  --pink-light: #fde8f1;
+  --pink-pale:  #fff4f9;
+  --mint:       #b8e8d8;
+  --mint-deep:  #6ecfb0;
+  --mint-light: #e8f8f3;
+  --lavender:   #c9b8f0;
+  --lav-light:  #f0ecfd;
+  --yellow:     #ffd97d;
+  --yel-light:  #fff8e6;
+  --peach:      #ffb997;
+  --peach-light:#fff0e8;
+  --bg:         #fff6fb;
+  --card:       #ffffff;
+  --ink:        #3d2b40;
+  --ink-soft:   #8a6a7a;
+  --ink-muted:  #c0a0b0;
+  --border:     #f0d8e8;
+  --shadow:     rgba(220,100,160,0.10);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Noto Sans SC', sans-serif;
+  min-height: 100vh;
+  padding-bottom: 90px;
+}
+.header {
+  background: linear-gradient(135deg, #f9c5dc 0%, #f7a8c4 40%, #e8b4e8 100%);
+  padding: 32px 20px 28px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 0 32px 32px;
+}
+.header::before {
+  content: '🌸';
+  position: absolute; right: 16px; top: 16px;
+  font-size: 52px; opacity: 0.3;
+  animation: float 3s ease-in-out infinite;
+}
+.header::after {
+  content: '✨';
+  position: absolute; right: 60px; bottom: 20px;
+  font-size: 22px; opacity: 0.4;
+  animation: float 2.5s ease-in-out infinite reverse;
+}
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.header-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px; }
+.app-name { font-family:'Nunito',sans-serif; font-size:26px; font-weight:800; color:#fff; text-shadow:0 2px 8px rgba(220,80,140,0.25); }
+.app-sub { font-size:11px; color:rgba(255,255,255,0.75); margin-top:2px; font-weight:500; letter-spacing:0.08em; }
+.date-badge { background:rgba(255,255,255,0.45); border:1.5px solid rgba(255,255,255,0.6); border-radius:20px; padding:6px 14px; font-size:11px; color:#fff; font-weight:600; backdrop-filter:blur(6px); }
+.stats-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.stat-item { background:rgba(255,255,255,0.55); border:1.5px solid rgba(255,255,255,0.7); border-radius:16px; padding:12px 8px; text-align:center; backdrop-filter:blur(8px); }
+.stat-value { font-family:'Nunito',sans-serif; font-size:20px; font-weight:800; color:var(--pink-deep); line-height:1; }
+.stat-unit { font-size:10px; color:rgba(232,116,158,0.7); margin-left:1px; }
+.stat-label { font-size:10px; color:rgba(61,43,64,0.5); margin-top:3px; font-weight:500; }
+.stat-change { font-size:10px; margin-top:2px; font-weight:600; }
+.up { color:#e07090; }
+.down { color:#6ecfb0; }
+.neutral { color:rgba(61,43,64,0.35); }
+.page { display:none; padding:18px 16px; }
+.page.active { display:block; }
+.card { background:var(--card); border-radius:20px; padding:18px; margin-bottom:14px; border:1.5px solid var(--border); box-shadow:0 4px 16px var(--shadow); }
+.card-title { font-size:12px; font-weight:700; letter-spacing:0.06em; color:var(--ink-muted); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
+.input-group { margin-bottom:14px; }
+.input-label { font-size:12px; color:var(--ink-soft); font-weight:600; margin-bottom:7px; display:block; }
+.input-row { display:flex; align-items:center; gap:10px; }
+input[type="number"], input[type="text"], input[type="date"] {
+  width:100%; padding:13px 16px; border:2px solid var(--border); border-radius:14px;
+  font-family:'Nunito',sans-serif; font-size:16px; font-weight:600; color:var(--ink);
+  background:var(--pink-pale); outline:none; transition:border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance:none;
+}
+input:focus { border-color:var(--pink); box-shadow:0 0 0 3px rgba(247,168,196,0.2); }
+.input-unit { font-size:13px; color:var(--ink-muted); font-weight:600; white-space:nowrap; }
+.gender-row { display:flex; gap:10px; }
+.gender-btn { flex:1; padding:12px; border:2px solid var(--border); border-radius:14px; background:var(--pink-pale); font-family:'Nunito',sans-serif; font-size:14px; font-weight:700; color:var(--ink-soft); cursor:pointer; transition:all 0.2s; text-align:center; }
+.gender-btn.active { border-color:var(--pink); background:var(--pink-light); color:var(--pink-deep); }
+.btn-primary { width:100%; padding:16px; background:linear-gradient(135deg,var(--pink) 0%,var(--pink-deep) 100%); color:#fff; border:none; border-radius:16px; font-family:'Nunito',sans-serif; font-size:15px; font-weight:800; cursor:pointer; transition:all 0.2s; margin-top:8px; box-shadow:0 4px 14px rgba(232,116,158,0.35); letter-spacing:0.02em; }
+.btn-primary:active { transform:scale(0.97); }
+.btn-secondary { width:100%; padding:14px; background:var(--pink-pale); color:var(--pink-deep); border:2px solid var(--pink-light); border-radius:16px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; margin-top:8px; }
+.weight-input-big { text-align:center; padding:10px 0; }
+.weight-input-big input { font-size:56px; font-weight:800; text-align:center; border:none; background:transparent; padding:0; width:200px; color:var(--pink-deep); font-family:'Nunito',sans-serif; box-shadow:none; }
+.weight-input-big input:focus { box-shadow:none; border:none; }
+.unit-big { font-size:20px; color:var(--ink-muted); font-weight:700; }
+.weight-hint { font-size:12px; color:var(--ink-muted); text-align:center; margin-top:4px; font-weight:500; }
+.bmi-display { text-align:center; padding:8px 0; }
+.bmi-number { font-family:'Nunito',sans-serif; font-size:52px; font-weight:800; line-height:1; color:var(--ink); }
+.bmi-label { display:inline-block; padding:5px 16px; border-radius:20px; font-size:13px; font-weight:700; margin-top:8px; }
+.bmi-underweight { background:var(--lav-light); color:#7060c0; }
+.bmi-normal      { background:var(--mint-light); color:#2e9b72; }
+.bmi-overweight  { background:var(--yel-light);  color:#b08020; }
+.bmi-obese       { background:var(--peach-light);color:#c05030; }
+.bmi-bar-wrap { margin-top:18px; }
+.bmi-bar { height:10px; border-radius:10px; background:linear-gradient(to right,#c8c0f0,#b8e8d8,#ffd97d,#ffb997); position:relative; }
+.bmi-marker { position:absolute; top:-5px; width:20px; height:20px; background:#fff; border:3px solid var(--pink-deep); border-radius:50%; box-shadow:0 2px 8px rgba(232,116,158,0.4); transform:translateX(-50%); transition:left 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+.bmi-bar-labels { display:flex; justify-content:space-between; margin-top:7px; font-size:9px; color:var(--ink-muted); font-weight:600; }
+.chart-wrap { position:relative; height:200px; }
+.record-item { display:flex; align-items:center; padding:13px 0; border-bottom:1.5px solid var(--pink-light); gap:8px; }
+.record-item:last-child { border-bottom:none; }
+.record-date { font-size:11px; color:var(--ink-muted); font-weight:600; width:48px; flex-shrink:0; }
+.record-weight { font-family:'Nunito',sans-serif; font-size:20px; font-weight:800; color:var(--ink); flex:1; }
+.record-weight span { font-size:11px; color:var(--ink-muted); font-weight:600; }
+.record-change { font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; }
+.record-change.up   { background:#fde8ee; color:#e0607a; }
+.record-change.down { background:var(--mint-light); color:#2e9b72; }
+.record-change.same { background:var(--pink-pale); color:var(--ink-muted); }
+.record-actions { display:flex; gap:5px; }
+.btn-edit { background:var(--lav-light); border:none; color:#7060c0; font-size:14px; width:32px; height:32px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+.btn-edit:active { transform:scale(0.88); }
+.btn-del  { background:#fde8ee; border:none; color:#e0607a; font-size:14px; width:32px; height:32px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+.btn-del:active { transform:scale(0.88); }
+.empty { text-align:center; padding:36px 20px; color:var(--ink-muted); }
+.empty-icon { font-size:48px; margin-bottom:10px; }
+.empty-text { font-size:13px; font-weight:600; }
+.toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:linear-gradient(135deg,var(--pink),var(--pink-deep)); color:#fff; padding:12px 24px; border-radius:30px; font-size:13px; font-weight:700; opacity:0; transition:all 0.3s; z-index:100; white-space:nowrap; box-shadow:0 4px 14px rgba(232,116,158,0.4); font-family:'Nunito',sans-serif; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:2px solid var(--border); display:flex; padding:8px 0 18px; z-index:20; box-shadow:0 -4px 20px rgba(220,100,160,0.08); }
+.bnav-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; border:none; background:transparent; cursor:pointer; padding:4px; }
+.bnav-icon { font-size:22px; transition:transform 0.2s; }
+.bnav-btn.active .bnav-icon { transform:scale(1.15); }
+.bnav-label { font-size:10px; color:var(--ink-muted); font-weight:700; font-family:'Nunito',sans-serif; }
+.bnav-btn.active .bnav-label { color:var(--pink-deep); }
+.setup-notice { background:linear-gradient(135deg,#fde8f1,#f0ecfd); border:1.5px solid var(--pink-light); border-radius:16px; padding:13px 16px; margin-bottom:14px; font-size:13px; color:var(--pink-deep); font-weight:600; display:none; }
+.setup-notice.show { display:block; }
+.goal-bar-bg { height:8px; background:var(--pink-light); border-radius:8px; overflow:hidden; }
+.goal-bar-fill { height:100%; background:linear-gradient(to right,var(--pink),var(--pink-deep)); border-radius:8px; transition:width 0.6s ease; }
+.goal-info { display:flex; justify-content:space-between; margin-top:6px; font-size:11px; color:var(--ink-muted); font-weight:600; }
+.quote-card { background:linear-gradient(135deg,#fde8f1 0%,#f0ecfd 100%); border:1.5px solid var(--border); border-radius:20px; padding:18px; margin-bottom:14px; position:relative; overflow:hidden; }
+.quote-card::after { content:'💕'; position:absolute; right:16px; bottom:12px; font-size:28px; opacity:0.4; }
+.quote-text { font-size:14px; color:var(--ink-soft); font-weight:600; line-height:1.7; }
+.quote-attr { font-size:11px; color:var(--pink-deep); margin-top:8px; font-weight:700; }
+.section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.see-all { font-size:11px; color:var(--pink-deep); font-weight:700; background:var(--pink-light); border:none; border-radius:20px; padding:4px 12px; cursor:pointer; }
+/* Edit modal */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(61,43,64,0.45); z-index:200; backdrop-filter:blur(4px); }
+.modal-overlay.open { display:block; }
+.modal-sheet { display:none; position:fixed; bottom:0; left:0; right:0; background:#fff; border-radius:28px 28px 0 0; padding:28px 20px 44px; z-index:201; box-shadow:0 -8px 40px rgba(220,100,160,0.2); transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.34,1,0.64,1); }
+.modal-sheet.open { display:block; transform:translateY(0); }
+.modal-handle { width:36px; height:4px; background:var(--pink-light); border-radius:4px; margin:0 auto 20px; }
+.modal-title { font-family:'Nunito',sans-serif; font-size:18px; font-weight:800; color:var(--ink); text-align:center; margin-bottom:4px; }
+.modal-sub { font-size:12px; color:var(--ink-muted); font-weight:600; text-align:center; margin-bottom:20px; }
+.modal-big-input { width:100%; padding:16px; border:2.5px solid var(--pink); border-radius:16px; font-family:'Nunito',sans-serif; font-size:28px; font-weight:800; color:var(--pink-deep); background:var(--pink-pale); outline:none; text-align:center; -webkit-appearance:none; margin-bottom:14px; }
+.modal-big-input:focus { box-shadow:0 0 0 4px rgba(247,168,196,0.25); }
+@media (max-width:360px) {
+  .stat-value { font-size:17px; }
+  .bmi-number { font-size:42px; }
+  .weight-input-big input { font-size:46px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="app-name">小甜豆 🍬</div>
+      <div class="app-sub">我的体重小助手</div>
+    </div>
+    <div class="date-badge" id="todayDate">--</div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-item">
+      <div><span class="stat-value" id="hdrCurrent">--</span><span class="stat-unit">kg</span></div>
+      <div class="stat-label">当前体重</div>
+      <div class="stat-change neutral" id="hdrChange">--</div>
+    </div>
+    <div class="stat-item">
+      <div><span class="stat-value" id="hdrBMI">--</span></div>
+      <div class="stat-label">BMI指数</div>
+      <div class="stat-change neutral" id="hdrBMILabel">--</div>
+    </div>
+    <div class="stat-item">
+      <div><span class="stat-value" id="hdrGoal">--</span><span class="stat-unit">kg</span></div>
+      <div class="stat-label">目标体重</div>
+      <div class="stat-change neutral" id="hdrGoalDiff">--</div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <button class="bnav-btn active" onclick="showPage('home')" id="bnav-home">
+    <div class="bnav-icon">🏠</div><div class="bnav-label">首页</div>
+  </button>
+  <button class="bnav-btn" onclick="showPage('record')" id="bnav-record">
+    <div class="bnav-icon">➕</div><div class="bnav-label">记录</div>
+  </button>
+  <button class="bnav-btn" onclick="showPage('chart')" id="bnav-chart">
+    <div class="bnav-icon">📈</div><div class="bnav-label">趋势</div>
+  </button>
+  <button class="bnav-btn" onclick="showPage('profile')" id="bnav-profile">
+    <div class="bnav-icon">🌸</div><div class="bnav-label">我的</div>
+  </button>
+</div>
+
+<!-- HOME -->
+
+<div class="page active" id="page-home">
+  <div class="setup-notice" id="setupNotice">🌷 请先去「我的」页面填写身高，才能计算BMI哦～</div>
+  <div class="quote-card">
+    <div class="quote-text" id="quoteText">每一天的坚持，都是给未来的自己最好的礼物 🎀</div>
+    <div class="quote-attr">— 今日鼓励</div>
+  </div>
+  <div class="card">
+    <div class="card-title">💗 BMI 指数</div>
+    <div class="bmi-display">
+      <div class="bmi-number" id="bmiNumber">--</div>
+      <div><span class="bmi-label bmi-normal" id="bmiLabel">请先记录体重</span></div>
+    </div>
+    <div class="bmi-bar-wrap">
+      <div class="bmi-bar"><div class="bmi-marker" id="bmiMarker" style="left:40%"></div></div>
+      <div class="bmi-bar-labels">
+        <span>偏轻&lt;18.5</span><span>正常</span><span>偏重 24</span><span>肥胖 28+</span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🎯 减重目标</div>
+    <div id="goalContent">
+      <div style="text-align:center;color:var(--ink-muted);font-size:13px;font-weight:600;padding:6px 0;">在「我的」里设置目标体重吧～ 🌟</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-header">
+      <div class="card-title" style="margin-bottom:0">📋 最近记录</div>
+      <button class="see-all" onclick="showPage('chart')">查看趋势 →</button>
+    </div>
+    <div id="recentList">
+      <div class="empty"><div class="empty-icon">🌱</div><div class="empty-text">还没有记录，点「➕」开始吧！</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- RECORD -->
+
+<div class="page" id="page-record">
+  <div class="card">
+    <div class="card-title">⚖️ 今日体重</div>
+    <div class="weight-input-big">
+      <input type="number" id="weightInput" placeholder="55.0" step="0.1" min="20" max="300">
+      <span class="unit-big">kg</span>
+    </div>
+    <div class="weight-hint" id="lastWeightHint">输入你今天的体重～</div>
+  </div>
+  <div class="card">
+    <div class="card-title">📅 记录日期</div>
+    <input type="date" id="recordDate">
+  </div>
+  <button class="btn-primary" onclick="saveRecord()">🍬 保存记录</button>
+  <button class="btn-secondary" onclick="showPage('home')">返回首页</button>
+</div>
+
+<!-- CHART -->
+
+<div class="page" id="page-chart">
+  <div class="card">
+    <div class="section-header">
+      <div class="card-title" style="margin-bottom:0">📈 体重趋势</div>
+      <div style="display:flex;gap:6px;">
+        <button onclick="setRange(7)"   id="rb7"  class="rbtn act-rb">7天</button>
+        <button onclick="setRange(30)"  id="rb30" class="rbtn">30天</button>
+        <button onclick="setRange(999)" id="rbAll" class="rbtn">全部</button>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="weightChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🌟 统计概览</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="text-align:center;padding:14px;background:var(--mint-light);border-radius:14px;border:1.5px solid var(--mint);">
+        <div style="font-family:'Nunito',sans-serif;font-size:22px;font-weight:800;color:#2e9b72;" id="statMin">--</div>
+        <div style="font-size:11px;color:#2e9b72;margin-top:3px;font-weight:600;">🏆 历史最低</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:var(--peach-light);border-radius:14px;border:1.5px solid var(--peach);">
+        <div style="font-family:'Nunito',sans-serif;font-size:22px;font-weight:800;color:#c05030;" id="statMax">--</div>
+        <div style="font-size:11px;color:#c05030;margin-top:3px;font-weight:600;">📌 历史最高</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:var(--lav-light);border-radius:14px;border:1.5px solid var(--lavender);">
+        <div style="font-family:'Nunito',sans-serif;font-size:22px;font-weight:800;color:#7060c0;" id="statAvg">--</div>
+        <div style="font-size:11px;color:#7060c0;margin-top:3px;font-weight:600;">📊 平均体重</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:var(--yel-light);border-radius:14px;border:1.5px solid var(--yellow);">
+        <div style="font-family:'Nunito',sans-serif;font-size:22px;font-weight:800;color:#b08020;" id="statTotal">--</div>
+        <div style="font-size:11px;color:#b08020;margin-top:3px;font-weight:600;">📝 记录天数</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 所有记录 <span style="font-size:10px;color:var(--pink-deep);background:var(--pink-light);padding:2px 8px;border-radius:10px;margin-left:4px;">可编辑</span></div>
+    <div id="allRecordsList">
+      <div class="empty"><div class="empty-icon">🌸</div><div class="empty-text">暂无记录</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE -->
+
+<div class="page" id="page-profile">
+  <div class="card">
+    <div class="card-title">👤 基本信息</div>
+    <div class="input-group">
+      <label class="input-label">你的名字（可选）✨</label>
+      <input type="text" id="profileName" placeholder="给自己起个可爱的昵称">
+    </div>
+    <div class="input-group">
+      <label class="input-label">性别</label>
+      <div class="gender-row">
+        <button class="gender-btn" id="genderM" onclick="setGender('M')">♂ 男生</button>
+        <button class="gender-btn active" id="genderF" onclick="setGender('F')">♀ 女生</button>
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">身高 🌻</label>
+      <div class="input-row">
+        <input type="number" id="profileHeight" placeholder="165" min="100" max="250">
+        <span class="input-unit">cm</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">年龄</label>
+      <div class="input-row">
+        <input type="number" id="profileAge" placeholder="22" min="10" max="100">
+        <span class="input-unit">岁</span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🎯 目标体重</div>
+    <div class="input-group">
+      <label class="input-label">我想达到的体重 💪</label>
+      <div class="input-row">
+        <input type="number" id="profileGoal" placeholder="50.0" step="0.5" min="20" max="300">
+        <span class="input-unit">kg</span>
+      </div>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="saveProfile()">🌸 保存设置</button>
+  <div class="card" style="margin-top:14px;">
+    <div class="card-title">📖 BMI 参考（中国标准）</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--lav-light);border-radius:12px;border:1.5px solid var(--lavender);">
+        <span style="font-size:14px;font-weight:700;color:#7060c0;">💜 偏轻</span>
+        <span style="font-size:12px;font-weight:700;color:#7060c0;">BMI &lt; 18.5</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--mint-light);border-radius:12px;border:1.5px solid var(--mint);">
+        <span style="font-size:14px;font-weight:700;color:#2e9b72;">💚 正常</span>
+        <span style="font-size:12px;font-weight:700;color:#2e9b72;">18.5 – 23.9</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--yel-light);border-radius:12px;border:1.5px solid var(--yellow);">
+        <span style="font-size:14px;font-weight:700;color:#b08020;">💛 偏重</span>
+        <span style="font-size:12px;font-weight:700;color:#b08020;">24.0 – 27.9</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--peach-light);border-radius:12px;border:1.5px solid var(--peach);">
+        <span style="font-size:14px;font-weight:700;color:#c05030;">🧡 肥胖</span>
+        <span style="font-size:12px;font-weight:700;color:#c05030;">BMI ≥ 28</span>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="background:var(--pink-pale);border-color:var(--pink-light);">
+    <div style="font-size:12px;color:var(--ink-muted);font-weight:600;margin-bottom:8px;">🔒 数据安全</div>
+    <div style="font-size:12px;color:var(--ink-soft);line-height:1.7;font-weight:500;">所有数据只保存在你的设备里，不会上传到任何地方，完全私密～</div>
+    <button onclick="clearAllData()" style="margin-top:12px;background:#fde8ee;border:2px solid #f0c0cc;color:#e0607a;padding:10px 16px;border-radius:12px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;width:100%;">清除所有数据</button>
+  </div>
+</div>
+
+<!-- Toast -->
+
+<div class="toast" id="toast"></div>
+
+<!-- Edit Modal -->
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeEditModal()"></div>
+<div class="modal-sheet" id="modalSheet">
+  <div class="modal-handle"></div>
+  <div class="modal-title">✏️ 修改体重记录</div>
+  <div class="modal-sub" id="editModalDate">日期：--</div>
+  <input type="number" class="modal-big-input" id="editWeightInput" step="0.1" min="20" max="300" placeholder="55.0">
+  <span style="display:block;text-align:center;font-size:13px;color:var(--ink-muted);font-weight:600;margin-bottom:16px;">kg</span>
+  <button onclick="confirmEdit()" class="btn-primary" style="margin-top:0;">✓ 确认修改</button>
+  <button onclick="closeEditModal()" class="btn-secondary">取消</button>
+</div>
+
+<style>
+.rbtn { font-family:'Nunito',sans-serif; font-size:11px; font-weight:700; padding:5px 12px; border-radius:20px; border:2px solid var(--border); background:transparent; color:var(--ink-muted); cursor:pointer; transition:all 0.2s; }
+.rbtn.act-rb { border-color:var(--pink); background:var(--pink-light); color:var(--pink-deep); }
+</style>
+
+<script>
+let records = JSON.parse(localStorage.getItem('wt_records') || '[]');
+let profile = JSON.parse(localStorage.getItem('wt_profile') || '{"gender":"F"}');
+let chartRange = 7;
+let weightChartInst = null;
+let editingDate = null;
+
+const quotes = [
+  "每一天的坚持，都是给未来的自己最好的礼物 🎀",
+  "你不需要完美，你只需要今天比昨天好一点点 🌷",
+  "减肥这件事，急不来，但坚持一定有回报 💪",
+  "爱自己，从好好照顾身体开始 🌸",
+  "记录是改变的第一步，你已经很棒了！✨",
+  "慢慢来，比较快 🐢💕",
+  "今天的自律，是明天更轻盈的自己 🦋",
+  "身体是你一辈子的家，好好对待它 🏡"
+];
+
+function init() {
+  const now = new Date();
+  document.getElementById('todayDate').textContent = `${now.getMonth()+1}月${now.getDate()}日`;
+  document.getElementById('recordDate').value = now.toISOString().split('T')[0];
+  document.getElementById('quoteText').textContent = quotes[now.getDate() % quotes.length];
+  if (profile.name)   document.getElementById('profileName').value   = profile.name;
+  if (profile.height) document.getElementById('profileHeight').value = profile.height;
+  if (profile.age)    document.getElementById('profileAge').value    = profile.age;
+  if (profile.goal)   document.getElementById('profileGoal').value   = profile.goal;
+  document.getElementById('genderM').classList.toggle('active', profile.gender === 'M');
+  document.getElementById('genderF').classList.toggle('active', profile.gender !== 'M');
+  if (!profile.height) document.getElementById('setupNotice').classList.add('show');
+  updateAll();
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('bnav-' + name).classList.add('active');
+  if (name === 'chart') renderChart();
+}
+
+function setGender(g) {
+  profile.gender = g;
+  document.getElementById('genderM').classList.toggle('active', g === 'M');
+  document.getElementById('genderF').classList.toggle('active', g === 'F');
+}
+
+function saveProfile() {
+  profile.name   = document.getElementById('profileName').value;
+  profile.height = parseFloat(document.getElementById('profileHeight').value) || null;
+  profile.age    = parseInt(document.getElementById('profileAge').value) || null;
+  profile.goal   = parseFloat(document.getElementById('profileGoal').value) || null;
+  localStorage.setItem('wt_profile', JSON.stringify(profile));
+  if (profile.height) document.getElementById('setupNotice').classList.remove('show');
+  showToast('设置已保存 🌸');
+  updateAll();
+}
+
+function saveRecord() {
+  const w = parseFloat(document.getElementById('weightInput').value);
+  const d = document.getElementById('recordDate').value;
+  if (!w || w < 20 || w > 300) { showToast('请输入正确的体重数字～'); return; }
+  if (!d) { showToast('请选择日期哦～'); return; }
+  records = records.filter(r => r.date !== d);
+  records.push({ date: d, weight: w });
+  records.sort((a, b) => a.date.localeCompare(b.date));
+  localStorage.setItem('wt_records', JSON.stringify(records));
+  showToast('记录成功 🍬');
+  document.getElementById('weightInput').value = '';
+  updateAll();
+  setTimeout(() => showPage('home'), 800);
+}
+
+function deleteRecord(date) {
+  if (!confirm('确定删除这条记录吗？')) return;
+  records = records.filter(r => r.date !== date);
+  localStorage.setItem('wt_records', JSON.stringify(records));
+  showToast('已删除 🗑️');
+  updateAll();
+  if (document.getElementById('page-chart').classList.contains('active')) renderChart();
+}
+
+function openEditModal(date, weight) {
+  editingDate = date;
+  document.getElementById('editModalDate').textContent = '日期：' + date;
+  document.getElementById('editWeightInput').value = weight;
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('modalSheet').classList.add('open');
+  setTimeout(() => document.getElementById('editWeightInput').focus(), 300);
+}
+
+function closeEditModal() {
+  editingDate = null;
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.getElementById('modalSheet').classList.remove('open');
+}
+
+function confirmEdit() {
+  const w = parseFloat(document.getElementById('editWeightInput').value);
+  if (!w || w < 20 || w > 300) { showToast('请输入正确的体重～'); return; }
+  records = records.map(r => r.date === editingDate ? { ...r, weight: w } : r);
+  localStorage.setItem('wt_records', JSON.stringify(records));
+  showToast('修改成功 ✨');
+  closeEditModal();
+  updateAll();
+  if (document.getElementById('page-chart').classList.contains('active')) renderChart();
+}
+
+function calcBMI(w) {
+  if (!profile.height || !w) return null;
+  return w / Math.pow(profile.height / 100, 2);
+}
+function getBMIInfo(bmi) {
+  if (!bmi) return { label: '请设置身高', cls: 'bmi-normal' };
+  if (bmi < 18.5) return { label: '💜 偏轻', cls: 'bmi-underweight' };
+  if (bmi < 24)   return { label: '💚 正常', cls: 'bmi-normal' };
+  if (bmi < 28)   return { label: '💛 偏重', cls: 'bmi-overweight' };
+  return { label: '🧡 肥胖', cls: 'bmi-obese' };
+}
+function bmiPct(bmi) { return Math.max(2, Math.min(98, ((bmi-15)/20)*100)); }
+
+function updateAll() {
+  const latest = records.length ? records[records.length-1] : null;
+  const prev   = records.length > 1 ? records[records.length-2] : null;
+  const bmi    = latest ? calcBMI(latest.weight) : null;
+  const bmiInfo = getBMIInfo(bmi);
+
+  document.getElementById('hdrCurrent').textContent  = latest ? latest.weight.toFixed(1) : '--';
+  document.getElementById('hdrBMI').textContent      = bmi ? bmi.toFixed(1) : '--';
+  document.getElementById('hdrBMILabel').textContent = bmi ? bmiInfo.label : '--';
+  document.getElementById('hdrGoal').textContent     = profile.goal || '--';
+
+  if (latest && prev) {
+    const d = (latest.weight - prev.weight).toFixed(1);
+    const el = document.getElementById('hdrChange');
+    el.textContent = d > 0 ? `▲ +${d}` : `▼ ${d}`;
+    el.className = 'stat-change ' + (d > 0 ? 'up' : 'down');
+  }
+  if (latest && profile.goal) {
+    const d = (latest.weight - profile.goal).toFixed(1);
+    const el = document.getElementById('hdrGoalDiff');
+    el.textContent = d > 0 ? `还差${d}kg` : '已达标🎉';
+    el.className = 'stat-change ' + (d > 0 ? 'neutral' : 'down');
+  }
+
+  document.getElementById('bmiNumber').textContent = bmi ? bmi.toFixed(1) : '--';
+  const lbl = document.getElementById('bmiLabel');
+  lbl.textContent = bmiInfo.label; lbl.className = 'bmi-label ' + bmiInfo.cls;
+  if (bmi) document.getElementById('bmiMarker').style.left = bmiPct(bmi) + '%';
+
+  if (profile.goal && latest) {
+    const s = records[0].weight, c = latest.weight, g = profile.goal;
+    const pct = Math.abs(s-g) > 0 ? Math.min(100, Math.round(Math.abs(s-c)/Math.abs(s-g)*100)) : 100;
+    document.getElementById('goalContent').innerHTML = `
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:11px;font-weight:600;color:var(--ink-soft);">
+        <span>起始 ${s}kg</span>
+        <span style="color:var(--pink-deep);font-size:12px;">🎀 ${pct}% 完成</span>
+        <span>目标 ${g}kg</span>
+      </div>
+      <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:${pct}%"></div></div>
+      <div class="goal-info"><span>当前 ${c}kg</span><span>还需减 ${Math.max(0,c-g).toFixed(1)}kg</span></div>`;
+  }
+
+  if (latest) document.getElementById('lastWeightHint').textContent = `上次记录：${latest.date}  ${latest.weight}kg`;
+  renderRecentList(); renderAllRecords(); renderStats();
+}
+
+function chgTag(curr, prev) {
+  if (prev == null) return '';
+  const d = (curr - prev).toFixed(1);
+  return `<span class="record-change ${d>0?'up':d<0?'down':'same'}">${d>0?'▲+':d<0?'▼':''}${d}kg</span>`;
+}
+
+function renderRecentList() {
+  const el = document.getElementById('recentList');
+  if (!records.length) { el.innerHTML='<div class="empty"><div class="empty-icon">🌱</div><div class="empty-text">还没有记录，点「➕」开始吧！</div></div>'; return; }
+  el.innerHTML = [...records].reverse().slice(0,5).map((r,i) => {
+    const p = records[records.length-2-i];
+    return `<div class="record-item">
+      <div class="record-date">${fmt(r.date)}</div>
+      <div class="record-weight">${r.weight.toFixed(1)}<span>kg</span></div>
+      ${chgTag(r.weight, p?.weight)}
+    </div>`;
+  }).join('');
+}
+
+function renderAllRecords() {
+  const el = document.getElementById('allRecordsList');
+  if (!records.length) { el.innerHTML='<div class="empty"><div class="empty-icon">🌸</div><div class="empty-text">暂无记录</div></div>'; return; }
+  el.innerHTML = [...records].reverse().map((r,i) => {
+    const p = records[records.length-2-i];
+    return `<div class="record-item">
+      <div class="record-date">${fmt(r.date)}</div>
+      <div class="record-weight">${r.weight.toFixed(1)}<span>kg</span></div>
+      ${chgTag(r.weight, p?.weight)}
+      <div class="record-actions">
+        <button class="btn-edit" onclick="openEditModal('${r.date}',${r.weight})" title="修改">✏️</button>
+        <button class="btn-del"  onclick="deleteRecord('${r.date}')" title="删除">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderStats() {
+  if (!records.length) return;
+  const ws = records.map(r => r.weight);
+  document.getElementById('statMin').textContent   = Math.min(...ws).toFixed(1)+'kg';
+  document.getElementById('statMax').textContent   = Math.max(...ws).toFixed(1)+'kg';
+  document.getElementById('statAvg').textContent   = (ws.reduce((a,b)=>a+b,0)/ws.length).toFixed(1)+'kg';
+  document.getElementById('statTotal').textContent = records.length+' 天';
+}
+
+function setRange(n) {
+  chartRange = n;
+  document.querySelectorAll('.rbtn').forEach(b => b.classList.remove('act-rb'));
+  document.getElementById(n===7?'rb7':n===30?'rb30':'rbAll').classList.add('act-rb');
+  renderChart();
+}
+
+function renderChart() {
+  let data = [...records];
+  if (chartRange < 999) {
+    const cut = new Date(); cut.setDate(cut.getDate()-chartRange);
+    data = data.filter(r => r.date >= cut.toISOString().split('T')[0]);
+  }
+  const labels = data.map(r => fmt(r.date));
+  const weights = data.map(r => r.weight);
+  if (weightChartInst) weightChartInst.destroy();
+  const ctx = document.getElementById('weightChart').getContext('2d');
+  const grad = ctx.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0,'rgba(247,168,196,0.4)');
+  grad.addColorStop(1,'rgba(247,168,196,0.02)');
+  const ds = [{
+    label:'体重(kg)', data:weights,
+    borderColor:'#e8749e', backgroundColor:grad, borderWidth:2.5,
+    pointBackgroundColor:'#fff', pointBorderColor:'#e8749e', pointBorderWidth:2.5,
+    pointRadius:data.length<20?6:3, pointHoverRadius:8, tension:0.4, fill:true
+  }];
+  if (profile.goal) ds.push({ label:'目标', data:Array(labels.length).fill(profile.goal), borderColor:'#6ecfb0', borderWidth:2, borderDash:[6,4], pointRadius:0, fill:false });
+  weightChartInst = new Chart(ctx, {
+    type:'line', data:{labels,datasets:ds},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:!!profile.goal, labels:{ font:{family:'Nunito',size:11,weight:'700'}, color:'#8a6a7a', boxWidth:18 } },
+        tooltip:{ backgroundColor:'#3d2b40', titleFont:{family:'Nunito',size:11}, bodyFont:{family:'Nunito',size:14,weight:'800'}, padding:12, cornerRadius:12 }
+      },
+      scales:{
+        x:{ ticks:{font:{family:'Nunito',size:10,weight:'600'},color:'#c0a0b0',maxTicksLimit:7}, grid:{color:'rgba(247,168,196,0.12)'} },
+        y:{ ticks:{font:{family:'Nunito',size:10,weight:'600'},color:'#c0a0b0'}, grid:{color:'rgba(247,168,196,0.18)'} }
+      }
+    }
+  });
+}
+
+function fmt(d) { const [,m,day]=d.split('-'); return `${m}/${day}`; }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function clearAllData() {
+  if (!confirm('确定要清除所有数据吗？')) return;
+  localStorage.removeItem('wt_records');
+  localStorage.removeItem('wt_profile');
+  location.reload();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key==='Enter' && editingDate) confirmEdit();
+  if (e.key==='Escape' && editingDate) closeEditModal();
+});
+
+init();
+</script>
+
+</body>
+</html>
